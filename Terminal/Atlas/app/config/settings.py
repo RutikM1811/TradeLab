@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     HOST: str = "127.0.0.1"
     PORT: int = 8000
+    CONVERSATION_STORAGE_PATH: str = "data/conversations"
 
     model_config = SettingsConfigDict(
         env_file=".env",

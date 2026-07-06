@@ -4,24 +4,35 @@ Atlas conversation state.
 Stores and manages messages for one conversation.
 """
 
+from app.memory.conversation_metadata import ConversationMetadata
 from app.types.message import Message, MessageRole
 
 
 class Conversation:
     """Represents one Atlas conversation."""
 
-    def __init__(self) -> None:
+    def __init__(
+            self,
+            metadata: ConversationMetadata | None = None,
+    ) -> None:
         self._messages: list[Message] = []
+        self.metadata = metadata or ConversationMetadata()
 
     def add(self, message: Message) -> None:
         """Add a message to the conversation."""
 
         if not message.content.strip():
-            raise ValueError("Message content cannot be empty.")
+            raise ValueError(
+                "Message content cannot be empty."
+            )
 
         self._messages.append(message)
+        self.metadata.touch()
 
-    def add_system(self, content: str) -> Message:
+    def add_system(
+            self,
+            content: str,
+    ) -> Message:
         """Add a system message."""
 
         return self._add_role_message(
@@ -29,7 +40,10 @@ class Conversation:
             content,
         )
 
-    def add_user(self, content: str) -> Message:
+    def add_user(
+            self,
+            content: str,
+    ) -> Message:
         """Add a user message."""
 
         return self._add_role_message(
@@ -37,7 +51,10 @@ class Conversation:
             content,
         )
 
-    def add_assistant(self, content: str) -> Message:
+    def add_assistant(
+            self,
+            content: str,
+    ) -> Message:
         """Add an assistant message."""
 
         return self._add_role_message(
@@ -45,7 +62,10 @@ class Conversation:
             content,
         )
 
-    def add_tool(self, content: str) -> Message:
+    def add_tool(
+            self,
+            content: str,
+    ) -> Message:
         """Add a tool message."""
 
         return self._add_role_message(
@@ -67,6 +87,8 @@ class Conversation:
         return self._messages[-1]
 
     def __len__(self) -> int:
+        """Return the number of messages."""
+
         return len(self._messages)
 
     def _add_role_message(
@@ -74,6 +96,8 @@ class Conversation:
             role: MessageRole,
             content: str,
     ) -> Message:
+        """Create and add a role-based message."""
+
         message = Message(
             role=role,
             content=content,

@@ -5,15 +5,24 @@ Responsible for starting and coordinating the Atlas framework.
 """
 
 from typing import Any
+from uuid import UUID
 
 from app.config.settings import get_settings
 from app.core.logger import configure_logger, logger
 from app.events.event_bus import EventBus
 from app.kernel.container import Container
 from app.kernel.registry import Registry
+from app.memory.conversation import Conversation
+from app.memory.conversation_manager import ConversationManager
+from app.models.atlas.atlas_model import AtlasModel
+from app.models.atlas.development_backend import DevelopmentBackend
 from app.models.echo_model import EchoModel
 from app.models.model_manager import ModelManager
 from app.models.model_registry import ModelRegistry
+from app.services.chat_runtime import ChatRuntime
+from app.storage.local.json_conversation_storage import (
+    JsonConversationStorage,
+)
 from app.tools.system_info_tool import SystemInfoTool
 from app.tools.tool_executor import ToolExecutor
 from app.tools.tool_registry import ToolRegistry
@@ -73,30 +82,89 @@ class Kernel:
         # Model runtime
         model_registry = ModelRegistry()
 
+        atlas_model = AtlasModel(
+            backend=DevelopmentBackend(),
+        )
+
+        model_registry.register(EchoModel())
+        model_registry.register(atlas_model)
+
         model_manager = ModelManager(
             model_registry=model_registry,
             event_bus=event_bus,
         )
 
-        # Register built-in Atlas models
-        model_registry.register(EchoModel())
+        # Conversation persistence
+        conversation_storage = JsonConversationStorage(
+            directory=self.settings.CONVERSATION_STORAGE_PATH,
+        )
+
+        # Conversation runtime
+        conversation_manager = ConversationManager(
+            storage=conversation_storage,
+        )
+
+        chat_runtime = ChatRuntime(
+            model=atlas_model,
+            conversation_manager=conversation_manager,
+        )
 
         # Register shared services
-        self.container.register(EventBus, event_bus)
-        self.container.register(Registry, registry)
+        self.container.register(
+            EventBus,
+            event_bus,
+        )
+        self.container.register(
+            Registry,
+            registry,
+        )
 
         # Register tool runtime
-        self.container.register(ToolRegistry, tool_registry)
-        self.container.register(ToolExecutor, tool_executor)
+        self.container.register(
+            ToolRegistry,
+            tool_registry,
+        )
+        self.container.register(
+            ToolExecutor,
+            tool_executor,
+        )
 
         # Register model runtime
-        self.container.register(ModelRegistry, model_registry)
-        self.container.register(ModelManager, model_manager)
+        self.container.register(
+            ModelRegistry,
+            model_registry,
+        )
+        self.container.register(
+            ModelManager,
+            model_manager,
+        )
+        self.container.register(
+            AtlasModel,
+            atlas_model,
+        )
+
+        # Register conversation persistence
+        self.container.register(
+            JsonConversationStorage,
+            conversation_storage,
+        )
+
+        # Register conversation runtime
+        self.container.register(
+            ConversationManager,
+            conversation_manager,
+        )
+        self.container.register(
+            ChatRuntime,
+            chat_runtime,
+        )
 
         # Register built-in Atlas tools
         tool_registry.register(SystemInfoTool())
 
-        logger.debug("Core services registered successfully.")
+        logger.debug(
+            "Core services registered successfully."
+        )
 
     async def execute_tool(
             self,
@@ -105,7 +173,9 @@ class Kernel:
     ) -> ToolResult:
         """Execute a registered Atlas tool."""
 
-        tool_executor = self.container.resolve(ToolExecutor)
+        tool_executor = self.container.resolve(
+            ToolExecutor
+        )
 
         return await tool_executor.execute(
             tool_name,
@@ -120,10 +190,121 @@ class Kernel:
     ) -> ModelResult:
         """Generate a response using a registered Atlas model."""
 
-        model_manager = self.container.resolve(ModelManager)
+        model_manager = self.container.resolve(
+            ModelManager
+        )
 
         return await model_manager.generate(
             model_name,
             prompt,
             **kwargs,
         )
+
+    def create_conversation(
+            self,
+    ) -> tuple[UUID, Conversation]:
+        """Create a new managed Atlas conversation."""
+
+        chat_runtime = self.container.resolve(
+            ChatRuntime
+        )
+
+        return chat_runtime.create_conversation()
+
+    async def chat(
+            self,
+            conversation_id: UUID,
+            message: str,
+            **kwargs: Any,
+    ) -> ModelResult:
+        """Send a message to a managed Atlas conversation."""
+
+        chat_runtime = self.container.resolve(
+            ChatRuntime
+        )
+
+        return await chat_runtime.send_to(
+            conversation_id,
+            message,
+            **kwargs,
+        )
+
+    def get_conversation(
+            self,
+            conversation_id: UUID,
+    ) -> Conversation:
+        """Return a managed conversation by ID."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        return conversation_manager.get(
+            conversation_id
+        )
+
+    def list_conversations(
+            self,
+    ) -> tuple[tuple[UUID, Conversation], ...]:
+        """Return all managed conversations."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        return conversation_manager.all()
+
+    def delete_conversation(
+            self,
+            conversation_id: UUID,
+    ) -> None:
+        """Delete a managed conversation."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        conversation_manager.delete(
+            conversation_id
+        )
+
+    def clear_conversations(self) -> None:
+        """Delete all managed conversations."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        conversation_manager.clear()
+
+    def conversation_count(self) -> int:
+        """Return the number of managed conversations."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        return len(conversation_manager)
+
+    def save_conversation(
+            self,
+            conversation_id: UUID,
+    ) -> None:
+        """Persist a managed conversation."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        conversation_manager.save(
+            conversation_id
+        )
+
+    def restore_conversations(self) -> int:
+        """Restore all persisted conversations into memory."""
+
+        conversation_manager = self.container.resolve(
+            ConversationManager
+        )
+
+        return conversation_manager.restore_all()
