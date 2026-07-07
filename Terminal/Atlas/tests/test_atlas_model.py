@@ -9,7 +9,7 @@ from app.models.atlas.backend import AbstractInferenceBackend
 from app.models.model_manager import ModelManager
 from app.models.model_registry import ModelRegistry
 from app.types.model_result import ModelResult
-
+from app.memory.conversation import Conversation
 
 class SuccessfulBackend(AbstractInferenceBackend):
     @property
@@ -76,7 +76,38 @@ class KwargsBackend(AbstractInferenceBackend):
 
         return ModelResult.ok(content="done")
 
+class StructuredBackend(AbstractInferenceBackend):
+    def __init__(self) -> None:
+        self.received_conversation: Conversation | None = None
+        self.received_system_prompt: str | None = None
+        self.received_kwargs: dict[str, Any] = {}
 
+    @property
+    def name(self) -> str:
+        return "structured_backend"
+
+    async def generate(
+            self,
+            prompt: str,
+            **kwargs: Any,
+    ) -> ModelResult:
+        return ModelResult.ok(
+            content="fallback response"
+        )
+
+    async def generate_from_conversation(
+            self,
+            conversation: Conversation,
+            system_prompt: str | None = None,
+            **kwargs: Any,
+    ) -> ModelResult:
+        self.received_conversation = conversation
+        self.received_system_prompt = system_prompt
+        self.received_kwargs = kwargs
+
+        return ModelResult.ok(
+            content="structured response"
+        )
 class IncompleteBackend(AbstractInferenceBackend):
     pass
 
@@ -232,3 +263,59 @@ async def test_backend_exception_is_handled_by_model_manager() -> None:
 
     assert result.success is False
     assert result.error == "Backend crashed."
+@pytest.mark.anyio
+async def test_conversation_generation_sends_system_prompt() -> None:
+    backend = StructuredBackend()
+    model = AtlasModel(backend)
+
+    conversation = Conversation()
+    conversation.add_user("Hello Atlas")
+
+    result = await model.generate_from_conversation(
+        conversation
+    )
+
+    assert result.success is True
+    assert result.content == "structured response"
+    assert (
+            backend.received_system_prompt
+            == AtlasModel.SYSTEM_PROMPT
+    )
+
+
+@pytest.mark.anyio
+async def test_system_prompt_is_not_stored_in_conversation() -> None:
+    backend = StructuredBackend()
+    model = AtlasModel(backend)
+
+    conversation = Conversation()
+    conversation.add_user("Hello Atlas")
+
+    messages_before = conversation.all()
+
+    await model.generate_from_conversation(
+        conversation
+    )
+
+    assert conversation.all() == messages_before
+    assert len(conversation) == 1
+
+
+@pytest.mark.anyio
+async def test_conversation_generation_forwards_kwargs() -> None:
+    backend = StructuredBackend()
+    model = AtlasModel(backend)
+
+    conversation = Conversation()
+    conversation.add_user("Analyze BTC")
+
+    await model.generate_from_conversation(
+        conversation,
+        temperature=0.2,
+        max_tokens=200,
+    )
+
+    assert backend.received_kwargs == {
+        "temperature": 0.2,
+        "max_tokens": 200,
+    }

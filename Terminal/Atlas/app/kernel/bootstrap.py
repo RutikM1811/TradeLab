@@ -16,6 +16,8 @@ from app.memory.conversation import Conversation
 from app.memory.conversation_manager import ConversationManager
 from app.models.atlas.atlas_model import AtlasModel
 from app.models.atlas.development_backend import DevelopmentBackend
+from app.models.atlas.groq_backend import GroqBackend
+from app.models.atlas.openrouter_backend import OpenRouterBackend
 from app.models.echo_model import EchoModel
 from app.models.model_manager import ModelManager
 from app.models.model_registry import ModelRegistry
@@ -62,7 +64,9 @@ class Kernel:
             },
         )
 
-        logger.success("Kernel initialized successfully.")
+        logger.success(
+            "Kernel initialized successfully."
+        )
 
     def _register_core_services(self) -> None:
         """Register Atlas core framework services."""
@@ -82,12 +86,47 @@ class Kernel:
         # Model runtime
         model_registry = ModelRegistry()
 
+        if self.settings.ATLAS_BACKEND == "openrouter":
+            atlas_backend = OpenRouterBackend(
+                api_key=self.settings.OPENROUTER_API_KEY,
+                model=self.settings.OPENROUTER_MODEL,
+                base_url=self.settings.OPENROUTER_BASE_URL,
+            )
+
+            logger.info(
+                "Using OpenRouter inference backend: {}",
+                self.settings.OPENROUTER_MODEL,
+            )
+
+        elif self.settings.ATLAS_BACKEND == "groq":
+            atlas_backend = GroqBackend(
+                api_key=self.settings.GROQ_API_KEY,
+                model=self.settings.GROQ_MODEL,
+                base_url=self.settings.GROQ_BASE_URL,
+            )
+
+            logger.info(
+                "Using Groq inference backend: {}",
+                self.settings.GROQ_MODEL,
+            )
+
+        else:
+            atlas_backend = DevelopmentBackend()
+
+            logger.info(
+                "Using development inference backend."
+            )
+
         atlas_model = AtlasModel(
-            backend=DevelopmentBackend(),
+            backend=atlas_backend,
         )
 
-        model_registry.register(EchoModel())
-        model_registry.register(atlas_model)
+        model_registry.register(
+            EchoModel()
+        )
+        model_registry.register(
+            atlas_model
+        )
 
         model_manager = ModelManager(
             model_registry=model_registry,
@@ -160,7 +199,9 @@ class Kernel:
         )
 
         # Register built-in Atlas tools
-        tool_registry.register(SystemInfoTool())
+        tool_registry.register(
+            SystemInfoTool()
+        )
 
         logger.debug(
             "Core services registered successfully."
