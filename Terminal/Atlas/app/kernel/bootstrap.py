@@ -16,6 +16,7 @@ from app.memory.conversation import Conversation
 from app.memory.conversation_manager import ConversationManager
 from app.models.atlas.atlas_model import AtlasModel
 from app.models.atlas.development_backend import DevelopmentBackend
+from app.models.atlas.fallback_backend import FallbackBackend
 from app.models.atlas.groq_backend import GroqBackend
 from app.models.atlas.openrouter_backend import OpenRouterBackend
 from app.models.echo_model import EchoModel
@@ -110,11 +111,39 @@ class Kernel:
                 self.settings.GROQ_MODEL,
             )
 
-        else:
+        elif self.settings.ATLAS_BACKEND == "fallback":
+            atlas_backend = FallbackBackend(
+                [
+                    GroqBackend(
+                        api_key=self.settings.GROQ_API_KEY,
+                        model=self.settings.GROQ_MODEL,
+                        base_url=self.settings.GROQ_BASE_URL,
+                    ),
+                    OpenRouterBackend(
+                        api_key=self.settings.OPENROUTER_API_KEY,
+                        model=self.settings.OPENROUTER_MODEL,
+                        base_url=self.settings.OPENROUTER_BASE_URL,
+                    ),
+                    DevelopmentBackend(),
+                ]
+            )
+
+            logger.info(
+                "Using fallback inference backend "
+                "(Groq -> OpenRouter -> Development)."
+            )
+
+        elif self.settings.ATLAS_BACKEND == "development":
             atlas_backend = DevelopmentBackend()
 
             logger.info(
                 "Using development inference backend."
+            )
+
+        else:
+            raise ValueError(
+                "Unsupported Atlas backend: "
+                f"{self.settings.ATLAS_BACKEND}"
             )
 
         atlas_model = AtlasModel(

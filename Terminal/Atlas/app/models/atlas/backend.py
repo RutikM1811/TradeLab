@@ -1,9 +1,3 @@
-"""
-Atlas inference backend contract.
-
-Defines how Atlas communicates with any underlying inference engine.
-"""
-
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -12,13 +6,11 @@ from app.types.model_result import ModelResult
 
 
 class AbstractInferenceBackend(ABC):
-    """Base contract for Atlas inference backends."""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Return the unique backend name."""
-
+        """Return the backend name."""
         raise NotImplementedError
 
     @abstractmethod
@@ -27,19 +19,20 @@ class AbstractInferenceBackend(ABC):
             prompt: str,
             **kwargs: Any,
     ) -> ModelResult:
-        """Generate a response using the inference backend."""
-
+        """Generate a response."""
         raise NotImplementedError
 
-async def generate_from_conversation(
-        self,
-        conversation: Conversation,
-        system_prompt: str | None = None,
-        **kwargs: Any,
-) -> ModelResult:
-    """Generate from structured conversation history."""
-
-    raise NotImplementedError(
-        f"{self.name} backend does not support "
-        "structured conversations."
-    )
+    async def generate_from_conversation(
+            self,
+            conversation: Conversation,
+            system_prompt: str | None = None,
+            **kwargs: Any,
+    ) -> ModelResult:
+        """
+        Default implementation builds a prompt from the conversation.
+        Backends may override this.
+        """
+        raise NotImplementedError(
+            f"{self.name} backend does not support "
+            "structured conversations."
+        )

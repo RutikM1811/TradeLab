@@ -18,9 +18,9 @@ class Settings(BaseSettings):
 
     HOST: str = "127.0.0.1"
     PORT: int = 8000
-    CONVERSATION_STORAGE_PATH: str = "data/conversations"
 
     CONVERSATION_STORAGE_PATH: str = "data/conversations"
+
     ATLAS_BACKEND: str = "development"
 
     OPENROUTER_API_KEY: str = ""
@@ -46,5 +46,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return the shared cached Atlas settings instance."""
-
     return Settings()
