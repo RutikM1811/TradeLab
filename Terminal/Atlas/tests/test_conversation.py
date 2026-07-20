@@ -178,3 +178,262 @@ def test_message_supports_metadata() -> None:
 
     assert message.metadata["tool_name"] == "get_price"
     assert message.metadata["symbol"] == "BTCUSDT"
+def test_new_conversation_has_default_metadata() -> None:
+    conversation = Conversation()
+
+    assert conversation.metadata is not None
+
+
+def test_add_returns_none() -> None:
+    conversation = Conversation()
+
+    message = Message(
+        role=MessageRole.USER,
+        content="Hello",
+    )
+
+    result = conversation.add(message)
+
+    assert result is None
+
+
+def test_add_preserves_same_message_instance() -> None:
+    conversation = Conversation()
+
+    message = Message(
+        role=MessageRole.USER,
+        content="Hello",
+    )
+
+    conversation.add(message)
+
+    assert conversation.all()[0] is message
+
+
+def test_len_increases_after_each_add() -> None:
+    conversation = Conversation()
+
+    assert len(conversation) == 0
+
+    conversation.add_user("One")
+    assert len(conversation) == 1
+
+    conversation.add_user("Two")
+    assert len(conversation) == 2
+
+    conversation.add_user("Three")
+    assert len(conversation) == 3
+
+
+def test_add_user_returns_last_message() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_user("Hello")
+
+    assert conversation.last() is message
+
+
+def test_add_system_returns_last_message() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_system("System")
+
+    assert conversation.last() is message
+
+
+def test_add_assistant_returns_last_message() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_assistant("Reply")
+
+    assert conversation.last() is message
+
+
+def test_add_tool_returns_last_message() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_tool("Tool output")
+
+    assert conversation.last() is message
+
+
+def test_multiple_user_messages_are_preserved() -> None:
+    conversation = Conversation()
+
+    conversation.add_user("One")
+    conversation.add_user("Two")
+    conversation.add_user("Three")
+
+    assert [m.content for m in conversation.all()] == [
+        "One",
+        "Two",
+        "Three",
+    ]
+
+
+def test_multiple_roles_are_preserved() -> None:
+    conversation = Conversation()
+
+    conversation.add_system("S")
+    conversation.add_user("U")
+    conversation.add_tool("T")
+    conversation.add_assistant("A")
+
+    assert [m.role for m in conversation.all()] == [
+        MessageRole.SYSTEM,
+        MessageRole.USER,
+        MessageRole.TOOL,
+        MessageRole.ASSISTANT,
+    ]
+
+
+def test_last_after_single_message() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_user("Hello")
+
+    assert conversation.last() is message
+
+
+def test_all_on_empty_conversation_returns_empty_tuple() -> None:
+    conversation = Conversation()
+
+    assert conversation.all() == ()
+
+
+def test_add_user_accepts_unicode() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_user("नमस्कार")
+
+    assert message.content == "नमस्कार"
+
+
+def test_add_user_accepts_emoji() -> None:
+    conversation = Conversation()
+
+    message = conversation.add_user("🚀")
+
+    assert message.content == "🚀"
+
+
+def test_add_user_accepts_multiline() -> None:
+    conversation = Conversation()
+
+    text = "One\nTwo\nThree"
+
+    message = conversation.add_user(text)
+
+    assert message.content == text
+
+
+def test_add_user_accepts_long_text() -> None:
+    conversation = Conversation()
+
+    text = "A" * 10000
+
+    message = conversation.add_user(text)
+
+    assert message.content == text
+
+
+def test_message_role_is_preserved_after_add() -> None:
+    conversation = Conversation()
+
+    message = Message(
+        role=MessageRole.TOOL,
+        content="Output",
+    )
+
+    conversation.add(message)
+
+    assert conversation.last().role is MessageRole.TOOL
+
+
+def test_message_content_is_preserved_after_add() -> None:
+    conversation = Conversation()
+
+    message = Message(
+        role=MessageRole.USER,
+        content="Exact text",
+    )
+
+    conversation.add(message)
+
+    assert conversation.last().content == "Exact text"
+
+
+def test_message_metadata_is_preserved() -> None:
+    conversation = Conversation()
+
+    message = Message(
+        role=MessageRole.USER,
+        content="Hello",
+        metadata={"key": "value"},
+    )
+
+    conversation.add(message)
+
+    assert conversation.last().metadata["key"] == "value"
+
+
+def test_last_changes_after_every_addition() -> None:
+    conversation = Conversation()
+
+    first = conversation.add_user("One")
+    second = conversation.add_assistant("Two")
+    third = conversation.add_tool("Three")
+
+    assert conversation.last() is third
+    assert conversation.last() is not second
+    assert conversation.last() is not first
+
+
+def test_conversation_keeps_exact_message_count() -> None:
+    conversation = Conversation()
+
+    for i in range(10):
+        conversation.add_user(str(i))
+
+    assert len(conversation) == 10
+
+
+def test_message_ids_are_all_unique_in_conversation() -> None:
+    conversation = Conversation()
+
+    for i in range(5):
+        conversation.add_user(str(i))
+
+    ids = [m.id for m in conversation.all()]
+
+    assert len(ids) == len(set(ids))
+
+
+def test_last_on_empty_conversation_remains_none() -> None:
+    conversation = Conversation()
+
+    assert conversation.last() is None
+    assert conversation.last() is None
+
+
+def test_all_returns_new_tuple_each_time() -> None:
+    conversation = Conversation()
+
+    conversation.add_user("Hello")
+
+    first = conversation.all()
+    second = conversation.all()
+
+    assert first == second
+    assert first is not second
+
+
+def test_adding_message_does_not_modify_previous_messages() -> None:
+    conversation = Conversation()
+
+    first = conversation.add_user("One")
+
+    conversation.add_assistant("Two")
+
+    assert first.content == "One"
+    assert first.role is MessageRole.USER

@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: atlas
+Version: 0.1.0
+Summary: TradeLab AI Engine
+Requires-Python: >=3.14
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: pydantic
+Requires-Dist: pydantic-settings
+Requires-Dist: loguru
+Requires-Dist: httpx

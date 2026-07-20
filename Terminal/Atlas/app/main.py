@@ -218,18 +218,20 @@ async def main() -> None:
 
             print()
             continue
-            if message == "/info":
-                info = commands.conversation_info(
-                    conversation_id
-                )
-                print()
-                print(f"Title: {info['title']}")
-                print(f"ID: {info['id']}")
-                print(f"Created: {info['created_at']}")
-                print(f"Updated: {info['updated_at']}")
-                print(f"Messages: {info['message_count']}")
-                print()
-                continue
+
+        if message == "/info":
+            info = commands.conversation_info(
+                conversation_id
+            )
+            print()
+            print(f"Title: {info['title']}")
+            print(f"ID: {info['id']}")
+            print(f"Created: {info['created_at']}")
+            print(f"Updated: {info['updated_at']}")
+            print(f"Messages: {info['message_count']}")
+            print()
+            continue
+
         if message.startswith("/"):
             print(
                 "Unknown command. "

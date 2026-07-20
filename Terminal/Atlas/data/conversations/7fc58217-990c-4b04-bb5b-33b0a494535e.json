@@ -1,0 +1,66 @@
+{
+  "id": "7fc58217-990c-4b04-bb5b-33b0a494535e",
+  "metadata": {
+    "title": "First Atlas Chat",
+    "created_at": "2026-07-06T20:36:37.422960+00:00",
+    "updated_at": "2026-07-07T17:17:31.014491+00:00"
+  },
+  "messages": [
+    {
+      "id": "67a16ce1-62e2-48b6-851f-183f661edaa2",
+      "role": "user",
+      "content": "Hello from my new chat",
+      "created_at": "2026-07-06T19:30:58.738498+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "c5121fcd-d219-466a-9249-c722f795b3a3",
+      "role": "assistant",
+      "content": "Atlas development response.",
+      "created_at": "2026-07-06T19:30:58.738556+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "b22483e5-fea1-45f3-a28c-112607193740",
+      "role": "user",
+      "content": "You: /switch 2",
+      "created_at": "2026-07-07T17:15:38.999494+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "6b3ece04-ddd7-4b16-a4dd-04c670480766",
+      "role": "assistant",
+      "content": "Atlas development response.",
+      "created_at": "2026-07-07T17:15:38.999773+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "fe5bfacf-d41e-4e09-9194-402d706e1968",
+      "role": "user",
+      "content": "You: /info",
+      "created_at": "2026-07-07T17:15:39.001849+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "57184075-8782-4a72-889b-40bfa5f5d44b",
+      "role": "assistant",
+      "content": "Atlas development response.",
+      "created_at": "2026-07-07T17:15:39.001901+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "3d83ac2f-04be-44a7-80fc-1cae6745595a",
+      "role": "user",
+      "content": "You: /history",
+      "created_at": "2026-07-07T17:15:39.500090+00:00",
+      "metadata": {}
+    },
+    {
+      "id": "6ce1564a-f99f-49e5-8bd2-295821b79a55",
+      "role": "assistant",
+      "content": "Atlas development response.",
+      "created_at": "2026-07-07T17:15:39.500136+00:00",
+      "metadata": {}
+    }
+  ]
+}

@@ -336,3 +336,353 @@ def test_load_rejects_mismatched_stored_id(
             match="does not match requested ID",
     ):
         storage.load(requested_id)
+def test_save_empty_conversation_creates_valid_json(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    path = tmp_path / f"{conversation_id}.json"
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+
+    assert data["id"] == str(conversation_id)
+    assert data["messages"] == []
+
+
+def test_save_preserves_unicode(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+    conversation.add_user("नमस्कार 🚀")
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert restored.last().content == "नमस्कार 🚀"
+
+
+def test_save_preserves_multiline_message(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+    conversation.add_user("One\nTwo\nThree")
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert restored.last().content == "One\nTwo\nThree"
+
+
+def test_save_preserves_long_message(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+    conversation.add_user("A" * 5000)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert restored.last().content == "A" * 5000
+
+
+def test_save_twice_keeps_single_json_file(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+    storage.save(conversation_id, Conversation())
+
+    assert len(list(tmp_path.glob("*.json"))) == 1
+
+
+def test_all_ids_returns_tuple(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    assert isinstance(storage.all_ids(), tuple)
+
+
+def test_all_ids_after_clear_is_empty(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    storage.save(uuid4(), Conversation())
+
+    storage.clear()
+
+    assert storage.all_ids() == ()
+
+
+def test_clear_on_empty_directory(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    storage.clear()
+
+    assert storage.all_ids() == ()
+
+
+def test_contains_after_delete_returns_false(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    storage.delete(conversation_id)
+
+    assert not storage.contains(conversation_id)
+
+
+def test_delete_removes_json_file(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    path = tmp_path / f"{conversation_id}.json"
+
+    storage.delete(conversation_id)
+
+    assert not path.exists()
+
+
+def test_save_multiple_conversations_creates_multiple_files(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    for _ in range(5):
+        storage.save(uuid4(), Conversation())
+
+    assert len(list(tmp_path.glob("*.json"))) == 5
+
+
+def test_load_empty_conversation(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    restored = storage.load(conversation_id)
+
+    assert len(restored) == 0
+
+
+def test_loaded_conversation_is_new_instance(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+    conversation.add_user("Hello")
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert restored is not conversation
+
+
+def test_loading_same_conversation_twice_returns_distinct_instances(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    first = storage.load(conversation_id)
+    second = storage.load(conversation_id)
+
+    assert first is not second
+
+
+def test_save_does_not_change_original_conversation(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+
+    conversation.add_user("Hello")
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    assert len(conversation) == 1
+
+
+def test_all_ids_sorted(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    ids = [uuid4() for _ in range(5)]
+
+    for conversation_id in reversed(ids):
+        storage.save(conversation_id, Conversation())
+
+    assert storage.all_ids() == tuple(sorted(ids))
+
+
+def test_directory_exists_after_storage_creation(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    assert storage._directory.exists()
+
+
+def test_contains_returns_false_after_clear(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    storage.clear()
+
+    assert not storage.contains(conversation_id)
+
+
+def test_save_json_is_valid(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    path = tmp_path / f"{conversation_id}.json"
+
+    json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_delete_one_preserves_others(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    first = uuid4()
+    second = uuid4()
+
+    storage.save(first, Conversation())
+    storage.save(second, Conversation())
+
+    storage.delete(first)
+
+    assert storage.contains(second)
+
+
+def test_clear_twice_does_not_fail(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    storage.save(uuid4(), Conversation())
+
+    storage.clear()
+    storage.clear()
+
+    assert storage.all_ids() == ()
+
+
+def test_loading_does_not_delete_file(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, Conversation())
+
+    storage.load(conversation_id)
+
+    assert storage.contains(conversation_id)
+
+
+def test_save_preserves_message_count(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+
+    for i in range(10):
+        conversation.add_user(str(i))
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert len(restored) == 10
+
+
+def test_save_preserves_role_order(
+        tmp_path: Path,
+) -> None:
+    storage = JsonConversationStorage(tmp_path)
+
+    conversation = Conversation()
+
+    conversation.add_system("S")
+    conversation.add_user("U")
+    conversation.add_tool("T")
+    conversation.add_assistant("A")
+
+    conversation_id = uuid4()
+
+    storage.save(conversation_id, conversation)
+
+    restored = storage.load(conversation_id)
+
+    assert [m.role for m in restored.all()] == [
+        MessageRole.SYSTEM,
+        MessageRole.USER,
+        MessageRole.TOOL,
+        MessageRole.ASSISTANT,
+    ]

@@ -47,6 +47,10 @@ class Kernel:
 
         configure_logger()
 
+        # Reset the container so boot() can be safely called
+        # more than once without duplicate-registration errors.
+        self.container = Container()
+
         logger.info("=" * 60)
         logger.info(f"Starting {self.settings.APP_NAME}")
         logger.info(f"Version : {self.settings.APP_VERSION}")
