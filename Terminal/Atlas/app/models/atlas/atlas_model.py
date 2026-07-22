@@ -6,7 +6,7 @@ interface while inference is delegated to a replaceable backend.
 """
 
 from typing import Any
-
+from collections.abc import AsyncIterator
 from app.contracts.abstract_model import AbstractModel
 from app.memory.conversation import Conversation
 from app.models.atlas.backend import AbstractInferenceBackend
@@ -58,7 +58,18 @@ class AtlasModel(AbstractModel):
         )
 
         return self._with_metadata(result)
+    async def generate_stream(
+            self,
+            prompt: str,
+            **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream a response through the configured backend."""
 
+        async for chunk in self._backend.generate_stream(
+                prompt,
+                **kwargs,
+        ):
+            yield chunk
     async def generate_from_conversation(
             self,
             conversation: Conversation,
@@ -133,3 +144,43 @@ class AtlasModel(AbstractModel):
             content=result.content or "",
             metadata=metadata,
         )
+    async def generate_stream_from_conversation(
+            self,
+            conversation: Conversation,
+            **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream a response from conversation history."""
+
+        if len(conversation) == 0:
+            raise ValueError(
+                "Conversation cannot be empty."
+            )
+
+        structured_generate = getattr(
+            self._backend,
+            "generate_stream_from_conversation",
+            None,
+        )
+
+        if structured_generate is not None:
+            try:
+                async for chunk in structured_generate(
+                        conversation,
+                        system_prompt=self.SYSTEM_PROMPT,
+                        **kwargs,
+                ):
+                    yield chunk
+                return
+
+            except NotImplementedError:
+                pass
+
+        context = self._context_builder.build(
+            conversation
+        )
+
+        async for chunk in self._backend.generate_stream(
+                context,
+                **kwargs,
+        ):
+            yield chunk

@@ -6,7 +6,7 @@ Responsible for starting and coordinating the Atlas framework.
 
 from typing import Any
 from uuid import UUID
-
+from collections.abc import AsyncIterator
 from app.config.settings import get_settings
 from app.core.logger import configure_logger, logger
 from app.events.event_bus import EventBus
@@ -302,7 +302,28 @@ class Kernel:
             message,
             **kwargs,
         )
+    async def chat_stream(
+            self,
+            conversation_id: UUID,
+            message: str,
+            **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream a response to a managed Atlas conversation."""
 
+        chat_runtime = self.container.resolve(
+            ChatRuntime
+        )
+
+        conversation = self.get_conversation(
+            conversation_id
+        )
+
+        async for chunk in chat_runtime.send_stream(
+                conversation,
+                message,
+                **kwargs,
+        ):
+            yield chunk
     def get_conversation(
             self,
             conversation_id: UUID,

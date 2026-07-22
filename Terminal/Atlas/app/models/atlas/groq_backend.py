@@ -11,6 +11,7 @@ from openai import AsyncOpenAI
 from app.memory.conversation import Conversation
 from app.models.atlas.backend import AbstractInferenceBackend
 from app.types.model_result import ModelResult
+from collections.abc import AsyncIterator
 
 
 class GroqBackend(AbstractInferenceBackend):
@@ -63,7 +64,25 @@ class GroqBackend(AbstractInferenceBackend):
             messages,
             **kwargs,
         )
+    async def generate_stream(
+            self,
+            prompt: str,
+            **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream a response using Groq."""
 
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+
+        async for chunk in self._generate_messages_stream(
+                messages,
+                **kwargs,
+        ):
+            yield chunk
     async def generate_from_conversation(
             self,
             conversation: Conversation,
@@ -164,3 +183,26 @@ class GroqBackend(AbstractInferenceBackend):
             "Groq generation failed: "
             f"{error}"
         )
+    async def _generate_messages_stream(
+            self,
+            messages: list[dict[str, str]],
+            **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """Stream model-ready messages."""
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            stream=True,
+            **kwargs,
+        )
+
+        async for chunk in stream:
+
+            if not chunk.choices:
+                continue
+
+            delta = chunk.choices[0].delta.content
+
+            if delta:
+                yield delta
