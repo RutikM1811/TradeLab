@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
+from app.tools.tool_parameter import ToolParameter
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True, frozen=True)
 class ToolSchema:
+    """Describes a callable tool."""
+
     name: str
     description: str
-    arguments: dict[str, str] = field(default_factory=dict)
-
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.name,
-                self.description,
-                tuple(sorted(self.arguments.items())),
-            )
-        )
+    parameters: tuple[ToolParameter, ...] = ()
+    returns: str = ""

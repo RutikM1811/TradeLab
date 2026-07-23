@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True, frozen=True)
 class ToolCall:
-    name: str
-    kwargs: dict[str, Any] = field(default_factory=dict)
+    """Represents a request to execute a tool."""
 
-    def __hash__(self) -> int:
-        return hash(
-            (
-                self.name,
-                tuple(sorted(self.kwargs.items())),
-            )
-        )
+    tool_name: str
+    arguments: dict[str, Any]
